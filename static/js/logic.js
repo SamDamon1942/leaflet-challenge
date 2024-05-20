@@ -8,13 +8,13 @@
 // ***********************
 
 // store the API endpoint as queryUrl.
-let queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson";
+let queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson";
 
 //perform a GET request to the query URL
-d3.json(queryUrl).then(function (features) {
+d3.json(queryUrl).then(function (earthquakeData) {
   // Once I get a response, send the features object to the createFeatures function.
-  console.log(features);
-    createFeatures(features);
+  console.log(earthquakeData);
+    createFeatures(earthquakeData);
 });
 
 //********************END OF DATA RETRIEVAL**************************************************
@@ -29,36 +29,26 @@ d3.json(queryUrl).then(function (features) {
 
 function createFeatures(earthquakeData){
   
-  // A function within a function: the following function creates a popup for each earthquake location
+  // function onEachFeatureFn(feature, layer) {
+  //   layer.bindPopup(`<h3>${feature.properties.place}</h3><hr><p>${new Date(feature.properties.time)}</p>`);
+  // }
 
-  function onEachFeatureFn(feature, layer) {
-     //bind a popup with earthquake information
-     layer.bindPopup(`<h3>${feature.properties.place}</h3><hr><p>${new Date(feature.properties.time)}</p>`);
+  var earthquakes = L.geoJSON(earthquakeData, {
+    pointToLayer: function(feature, latlng) {
+      return L.circleMarker(latlng, {
+        radius: feature.properties.mag * 10, // Set the marker radius based on earthquake magnitude
+        fillColor: getColorForDepth(feature.geometry.coordinates[2]), // Set marker color based on earthquake magnitude
+        color: "#000",
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.8
+      });
+    },
+    onEachFeature: function(feature, layer) {
+      layer.bindPopup("Magnitude: "+ feature.properties.mag + "<br>Depth: " + feature.geometry.coordinates[2] + "<br>Location: " + feature.properties.place);
     }
-
-  //create a marker for each earthquake feature
-  const latitude = feature.geometry.coordinates[0];
-  const longitude = feature.geometry.coordinates[1];
-  console.log(latitude, longitude);
-
-  let earthquakes = L.circle([latitude, longitude], {
-    radius: feature.properties.mag * 5, // Set marker size based on magnitude
-    // fillColor: getColorForDepth(feature.geometry.depth), // Set marker color based on depth
-    fillColor: "white",
-    color: '#000', // Border color
-    weight: 1, // Border width
-    opacity: 1, // Border opacity
-    fillOpacity: 0.8 // Fill opacity
   });
-    
   
-
-
-    // Now, create a GeoJSON layer that contains the features array on the earthquakeData object.
-  // let earthquakes = L.geoJSON(earthquakeData, {
-  //   onEachFeature: onEachFeatureFn
-  // });
-
   // Lastly, send the earthquake layer to the createMap function
   createMap(earthquakes);
 }
@@ -108,51 +98,59 @@ function createMap(earthquakes) {
 
   let myMap = L.map("map", {
     center: [
-      37.09, -95.71
+      0.00, 0.00
     ],
-    zoom: 3,
+    zoom: 2.5,
     layers: [street, earthquakes]
   });
 
+  // *******************************************************
+  // ** Create a legend to show the depth in kilometers of**
+  // ** earthquakes with corresponding colors             **
+  // *******************************************************
+
+  // // Define the legend control
+  let legend = L.control({ position: 'bottomright'});
+  
+  legend.onAdd = function() {
+    let div = L.DomUtil.create("div", "info legend");
+    let depths = [-10, 10, 30, 50, 70, 90]; // Define the depth ranges
+    let colors = [colorArray[0], colorArray[1], colorArray[2], colorArray[3], colorArray[4], colorArray[5]]; // Define colors for each depth range
+    let labels = [];
+
+    // Add the legend title
+    div.innerHTML = "<h4>Earthquake Depth "+ "<br>(km)</h4>";
+
+    // Loop through the depth ranges and create a label for each
+    for (let i = 0; i < depths.length; i++) {
+        div.innerHTML +=
+            '<i style="background:' + colors[i] + '"></i> ' +
+            depths[i] + (depths[i + 1] ? '&ndash;' + depths[i + 1] + '<br>' : '+');
+    }
+
+    return div;
+};
+
+// Add the legend to the map
+  legend.addTo(myMap);
 }
 
-// *******************************************************
-// ** Create a legend to show the depth in kilometers of**
-// ** earthquakes with corresponding colors             **
-// *******************************************************
+//********************END OF MAP CREATION***********************************************
 
-// // Define the legend control
-// let legend = L.control({ position: "bottomright"});
+//*************************************************
+//** create an array of colors - this obviates   **
+//**  the need to identify colors more than once.**
+//*************************************************
 
-// // 1. define depth ranges in kilometers
-// var depthRanges = [-10, 10, 30, 50, 70, 90]; // depth ranges in kilometers
-
-// // 2. add content to the legend
-// legend.onAdd = function (map) {
-//     var div = L.DomUtil.create('div', 'legend');
-//     div.innerHTML = '<h4>Earthquake Depth (km)</h4>';
-    
-//     // Loop through depth ranges, add color-coded indicators, and create a label for each
-//     for (let i = 0; i < depthRanges.length; i++) {
-//       div.innerHTML +=
-//           '<i style="background:' + getColorForDepth(depthRanges[i]) + '"></i> ' +
-//           depthRanges[i] + (depthRanges[i + 1] ? '&ndash;' + depthRanges[i + 1] + '<br>' : '+');
-//   }
-//         return div;
-// };
+colorArray = ['#98ee00', '#d4ee00','#eecc00','#ee9c00','#ea822c', '#ea2c2c']
 
 // create a function to assign the legend color based on depth
 function getColorForDepth(depth) {
-// define the color scale based on depth values
-  return depth >= 90 ? '#800026' :
-         depth >= 70 ? '#BD0026' :
-         depth >= 50 ? '#E31A1C' :
-         depth >= 30 ? '#FC4E2A' :
-         depth >= 10 ? '#FD8D3C' :
-        '#FEB24C';
+  // define the color scale based on depth values
+    return depth >= 90 ? colorArray[5]:
+          depth >= 70 ? colorArray[4] :
+          depth >= 50 ? colorArray[3] :
+          depth >= 30 ? colorArray[2] :
+          depth >= 10 ? colorArray[1] :
+          colorArray[0];
 }
-
-// // Add the legend to the map
-// legend.addTo(map);
-
-//********************END OF MAP CREATION***********************************************
