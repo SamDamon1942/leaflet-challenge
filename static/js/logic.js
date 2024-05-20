@@ -31,31 +31,33 @@ function createFeatures(earthquakeData){
   
   // A function within a function: the following function creates a popup for each earthquake location
 
-  function onEachFeatureFn(feature) {
-    //create a marker for each earthquake feature
-    const latitude = feature.geometry.coordinates[0];
-    const longitude = feature.geometry.coordinates[1];
-    console.log(latitude, longitude);
-
-
-    var marker = L.circle([latitude, longitude], {
-      radius: feature.properties.mag * 5, // Set marker size based on magnitude
-      // fillColor: getColorForDepth(feature.geometry.depth), // Set marker color based on depth
-      fillColor: "white",
-      color: '#000', // Border color
-      weight: 1, // Border width
-      opacity: 1, // Border opacity
-      fillOpacity: 0.8 // Fill opacity
-    });
-    
-    //next, bind a popup with earthquake information
-    marker.bindPopup(`<h3>${feature.properties.place}</h3><hr><p>${new Date(feature.properties.time)}</p>`);
+  function onEachFeatureFn(feature, layer) {
+     //bind a popup with earthquake information
+     layer.bindPopup(`<h3>${feature.properties.place}</h3><hr><p>${new Date(feature.properties.time)}</p>`);
     }
 
-  // Now, create a GeoJSON layer that contains the features array on the earthquakeData object.
-  let earthquakes = L.geoJSON(earthquakeData, {
-    onEachFeature: onEachFeatureFn
+  //create a marker for each earthquake feature
+  const latitude = feature.geometry.coordinates[0];
+  const longitude = feature.geometry.coordinates[1];
+  console.log(latitude, longitude);
+
+  let earthquakes = L.circle([latitude, longitude], {
+    radius: feature.properties.mag * 5, // Set marker size based on magnitude
+    // fillColor: getColorForDepth(feature.geometry.depth), // Set marker color based on depth
+    fillColor: "white",
+    color: '#000', // Border color
+    weight: 1, // Border width
+    opacity: 1, // Border opacity
+    fillOpacity: 0.8 // Fill opacity
   });
+    
+  
+
+
+    // Now, create a GeoJSON layer that contains the features array on the earthquakeData object.
+  // let earthquakes = L.geoJSON(earthquakeData, {
+  //   onEachFeature: onEachFeatureFn
+  // });
 
   // Lastly, send the earthquake layer to the createMap function
   createMap(earthquakes);
@@ -108,7 +110,7 @@ function createMap(earthquakes) {
     center: [
       37.09, -95.71
     ],
-    zoom: 5,
+    zoom: 3,
     layers: [street, earthquakes]
   });
 
